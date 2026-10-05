@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Portfolio · The Desk</title>
+<style>
+:root{--bg:#08070d;--ink:#e9e6f5;--mute:#8c88a6;--panel:#0f0d18;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Space Grotesk",system-ui,sans-serif;overflow:hidden}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+#hint{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:0;right:0;text-align:center;color:var(--mute);font-size:14px;pointer-events:none;transition:opacity .4s}
+#nav{position:fixed;z-index:2;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:0 12px;transition:opacity .3s}
+#nav button,#back{font:inherit;color:var(--ink);background:#15121fcc;border:1px solid #2b2740;border-radius:999px;padding:10px 16px;cursor:pointer;backdrop-filter:blur(6px)}
+#nav button:hover,#back:hover,.panel-nav button:hover,#nav button:focus-visible,#back:focus-visible,.panel-nav button:focus-visible{border-color:var(--c,#8a7dff);outline:none}
+#panel{position:fixed;z-index:2;left:0;right:0;bottom:0;max-height:52%;overflow:auto;touch-action:pan-y;background:linear-gradient(#0f0d18ee,#0f0d18);border-top:2px solid var(--c);padding:18px 18px calc(env(safe-area-inset-bottom,0px) + 18px);transform:translateY(105%);transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+#panel.on{transform:none}
+#panel h2{margin:0 0 4px;font-size:24px;color:var(--c)}
+#panel p.s{margin:0 0 14px;color:var(--mute)}
+.it{border-left:2px solid var(--c);padding:2px 0 2px 12px;margin:0 0 12px}
+.it b{display:block}.it span{color:var(--mute);font-size:14px}
+.panel-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.panel-nav button{font:inherit;color:var(--ink);background:#15121fcc;border:1px solid #2b2740;border-radius:999px;padding:8px 12px;cursor:pointer;backdrop-filter:blur(6px)}
+.radio-tracks{display:grid;gap:6px;margin:10px 0 12px}
+.radio-track{width:100%;padding:8px 10px;text-align:left;font:inherit;font-size:13px;color:var(--ink);background:#15121fcc;border:1px solid #2b2740;border-radius:5px;cursor:pointer}
+.radio-track[aria-pressed="true"]{border-color:#3dffb0;background:#17251f}
+#spotify-player{display:block;width:100%;height:152px;border:0;background:#0f0d18}
+@media(min-width:800px){#panel{left:auto;top:0;max-height:none;width:380px;border-top:0;border-left:2px solid var(--c);transform:translateX(105%)}#panel.on{transform:none}}
+@media(prefers-reduced-motion:reduce){#panel{transition:none}}
+</style></head>
+<body>
+<div id="hint">Tap a screen or the radio to explore. Swipe or drag to move around.</div>
+<div id="nav"></div>
+<aside id="panel" aria-live="polite"></aside>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===== EDIT YOUR CONTENT HERE (placeholders) =====
+const DATA={
+ laptop:{t:"Web Development",c:"#4db8ff",s:"Web development projects, including Shopify builds.",i:[
+  ["Project name 1","One line on what it does and the stack you used."],
+  ["Shopify store build","Custom theme, apps or store you built for a client."],
+  ["Project name 3","Add your best repo or demo link here."]]},
+ cyber:{t:"Cybersecurity",c:"#3dffb0",s:"Labs, CTFs and security write-ups.",i:[
+  ["CTF write-up","Platform, challenge, and what you learned."],
+  ["Home lab","Network, tools and what you tested."],
+  ["Vulnerability research","Add a responsible-disclosure or lab project."]]},
+ video:{t:"Video Editing",c:"#ff4d8d",s:"Edits, motion and storytelling.",i:[
+  ["Showreel","Link to your best 60 seconds."],
+  ["Short-form edits","Reels, TikToks, YouTube pieces."],
+  ["Tools","Premiere, DaVinci, After Effects, etc."]]},
+ about:{t:"About me",c:"#8a7dff",s:"The part that doesn't fit in a resume.",i:[
+  ["Who I am","CS student who builds, breaks and edits things. Write your story here."],
+  ["Off the clock","Night owl. Add what you actually do for fun."],
+  ["Contact","your@email.com · github.com/you · linkedin.com/in/you"]]}
+};
+const VIEW={ // camera position, look target
+ home:[[0,2.6,8.2],[0,1.7,0]],
+ cyber:[[-2.9,2.5,3.3],[-2.9,2.0,0]],
+ video:[[0,3.5,3.3],[0,3.05,0]],
+ about:[[2.9,2.5,3.3],[2.9,2.0,0]],
+ laptop:[[0,2.0,3.4],[0,1.3,.6]],
+ radio:[[-3.85,1.75,4.5],[-3.85,.65,1.25]]
+};
+// ===== SCENE =====
+const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));
+document.body.appendChild(R.domElement);
+const S=new THREE.Scene();S.background=new THREE.Color(0x08070d);S.fog=new THREE.Fog(0x08070d,9,22);
+const cam=new THREE.PerspectiveCamera(50,1,.1,50);
+const mat=(c,r=.7)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:.3});
+function box(w,h,d,m,x,y,z,p=S){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);p.add(o);return o}
+S.add(new THREE.AmbientLight(0x6a5fa0,.55));
+const lights={cyber:0x3dffb0,video:0xff4d8d,about:0x8a7dff,laptop:0x4db8ff};
+const pl={};
+function screenTex(key,lines){
+ const c=document.createElement("canvas");c.width=512;c.height=320;const g=c.getContext("2d"),col=DATA[key].c;
+ g.fillStyle="#05060a";g.fillRect(0,0,512,320);
+ g.fillStyle=col;g.globalAlpha=.12;g.fillRect(0,0,512,44);g.globalAlpha=1;
+ g.font="bold 24px monospace";g.fillText(DATA[key].t,18,30);
+ g.font="20px monospace";lines.forEach((l,i)=>{g.fillStyle=i%2?col:"#8c88a6";g.fillText(l,18,84+i*34)});
+ g.fillStyle="#fff";g.globalAlpha=.04;for(let y=0;y<320;y+=4)g.fillRect(0,y,512,1);
+ g.globalAlpha=1;g.strokeStyle=col;g.lineWidth=4;g.strokeRect(2,2,508,316);
+ return new THREE.CanvasTexture(c)}
+const clickable=[];
+function screen(key,w,h,x,y,z,ry,rx,parent,lines){
+ const m=new THREE.MeshBasicMaterial({map:screenTex(key,lines),color:0xaaaaaa});
+ const s=new THREE.Mesh(new THREE.PlaneGeometry(w,h),m);s.position.set(x,y,z);s.rotation.set(rx||0,ry||0,0);
+ s.userData.key=key;parent.add(s);clickable.push(s);return s}
+// desk
+const wood=mat(0x1a1626,.9),metal=mat(0x14121c,.4);
+box(10,.12,3.6,wood,0,.9,.4);
+[[-4.7,-1.2],[4.7,-1.2],[-4.7,1.9],[4.7,1.9]].forEach(p=>box(.12,.9,.12,metal,p[0],.45,p[1]));
+box(30,.1,30,mat(0x0b0a12,1),0,0,0).position.y=-.02;
+box(30,10,.1,mat(0x0b0a12,1),0,5,-4);
+// monitors
+function monitor(key,x,ry,lines,lift=0){
+ const g=new THREE.Group();g.position.set(x,0,0);g.rotation.y=ry;S.add(g);
+ box(.1,.8+lift,.1,metal,0,1.3+lift/2,-.2,g);box(1,.05,.6,metal,0,.98,-.2,g);
+ box(2.5,1.55,.08,metal,0,2.15+lift,-.1,g);
+ screen(key,2.34,1.39,0,2.15+lift,-.055,0,0,g,lines);
+ const l=new THREE.PointLight(lights[key],.9,6);l.position.set(x,2.2+lift,1.2);S.add(l);pl[key]=l}
+monitor("cyber",-2.9,.2,["$ nmap -sV 10.0.0.5","22/tcp open ssh","80/tcp open http","$ ./exploit --lab","[+] flag captured","$ report.md"]);
+monitor("video",0,0,["TIMELINE 00:00:42","V1 ████░░██████","V2 ░░████░░░███","A1 ██████████░░","FX color·cut·grade","> export 4K"],.9);
+monitor("about",2.9,-.2,["$ whoami","student. builder.","$ cat nights.txt","coffee, code, cuts","$ ls dreams/","*_*"]);
+// laptop
+const lap=new THREE.Group();lap.position.set(0,.96,1.15);S.add(lap);
+box(1.8,.05,1.2,metal,0,0,0,lap);box(1.5,.01,.5,mat(0x08070d,.9),0,.03,.2,lap);
+const lid=new THREE.Group();lid.position.set(0,.03,-.58);lid.rotation.x=-.28;lap.add(lid);
+box(1.8,1.15,.04,metal,0,.58,0,lid);
+screen("laptop",1.66,1.02,0,.58,.025,0,0,lid,["$ git log --oneline","feat: shopify theme","fix: checkout flow","$ npm run build","✓ compiled","$ deploy --prod"]);
+const ll=new THREE.PointLight(0x4db8ff,.7,4);ll.position.set(0,1.8,2.2);S.add(ll);pl.laptop=ll;
+// keyboard + mouse deco
+box(1.4,.04,.45,metal,.1,.94,2.3).userData={};
+// desk radio
+const radioGroup=new THREE.Group();radioGroup.position.set(-3.85,.96,1.25);S.add(radioGroup);
+const radioBody=box(1.08,.52,.5,metal,0,.27,0,radioGroup);radioBody.userData.radioAction="open";clickable.push(radioBody);
+box(1.04,.48,.025,wood,0,.27,.26,radioGroup);
+const radioDisplayCanvas=document.createElement("canvas");radioDisplayCanvas.width=512;radioDisplayCanvas.height=160;
+const radioDisplayContext=radioDisplayCanvas.getContext("2d");
+radioDisplayContext.fillStyle="#05060a";radioDisplayContext.fillRect(0,0,512,160);
+const radioDisplay=new THREE.Mesh(new THREE.PlaneGeometry(.66,.2),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(radioDisplayCanvas)}));
+radioDisplay.position.set(-.12,.39,.279);radioDisplay.userData.radioAction="open";radioGroup.add(radioDisplay);clickable.push(radioDisplay);
+for(let i=0;i<3;i++){
+ const button=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.035,16),mat(i===0?0x4db8ff:i===1?0x3dffb0:0xff4d8d,.35));
+ button.rotation.x=Math.PI/2;button.position.set(-.3+i*.22,.13,.29);button.userData.radioTrackIndex=i;radioGroup.add(button);clickable.push(button);
+}
+for(let row=0;row<3;row++)for(let col=0;col<4;col++){
+ const hole=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.018,8),mat(0x090a10,.9));
+ hole.rotation.x=Math.PI/2;hole.position.set(.28+col*.045,.14+row*.045,.278);radioGroup.add(hole);
+}
+const tuningKnob=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.09,20),metal);
+tuningKnob.rotation.x=Math.PI/2;tuningKnob.position.set(.43,.4,.29);radioGroup.add(tuningKnob);
+tuningKnob.userData.radioAction="next";clickable.push(tuningKnob);
+box(.62,.045,.06,metal,0,.56,-.02,radioGroup);
+const antenna=new THREE.Mesh(new THREE.CylinderGeometry(.008,.012,.55,8),metal);
+antenna.position.set(.4,.79,-.08);antenna.rotation.z=-.16;radioGroup.add(antenna);
+// particles
+const N=220,pp=new Float32Array(N*3);for(let i=0;i<N;i++){pp[i*3]=(Math.random()-.5)*14;pp[i*3+1]=Math.random()*6;pp[i*3+2]=(Math.random()-.5)*8}
+const pg=new THREE.BufferGeometry();pg.setAttribute("position",new THREE.BufferAttribute(pp,3));
+const pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x8a7dff,size:.03,transparent:true,opacity:.6}));S.add(pts);
+// ===== INTERACTION =====
+let cur="home",pos=new THREE.Vector3(0,2.6,8.2),look=new THREE.Vector3(0,1.7,0),tp=pos.clone(),tl=look.clone();
+let mx=0,my=0,hover=null,drag=false,lx=0,yaw=0,tyaw=0;
+const panel=document.getElementById("panel"),nav=document.getElementById("nav"),hint=document.getElementById("hint");
+const monitorKeys=["laptop","cyber","video","about"];
+const swipeStops=["home","radio","cyber","video","about","laptop"];
+const tracks=[
+ {title:"Starburster",artist:"Fontaines D.C.",id:"1cg4xD453Wuol9fNsRDbsV"},
+ {title:"Mad Technology",artist:"Zcar Face & Franky Pulitzer",id:"6yDQOCVxV6Z0XGZgbeCvMi"},
+ {title:"Lovesong",artist:"Adele",id:"1KpLYVqnB135VCNbdLymNx"}
+];
+let radioTrackIndex=0;
+function drawRadioDisplay(status="READY"){
+ const g=radioDisplayContext,track=tracks[radioTrackIndex];
+ g.fillStyle="#05060a";g.fillRect(0,0,512,160);g.fillStyle="#3dffb0";g.font="bold 20px monospace";g.fillText("DESK RADIO",16,28);
+ g.fillStyle="#e9e6f5";g.font="bold 27px monospace";g.fillText(track.title,16,72,480);
+ g.fillStyle="#8c88a6";g.font="20px monospace";g.fillText(track.artist,16,104,480);
+ g.fillStyle=status==="PLAYING"?"#3dffb0":"#ffbd5c";g.font="bold 18px monospace";g.fillText(status,16,140);
+ radioDisplay.material.map.needsUpdate=true;
+}
+drawRadioDisplay();
+let audioContext;
+function clickFeedback(key){
+ const cues={
+  laptop:{wave:"sine",from:780,to:480,duration:.05,vibration:7},
+  cyber:{wave:"square",from:1040,to:620,duration:.04,vibration:[5,12,5]},
+  video:{wave:"triangle",from:520,to:740,duration:.075,vibration:12},
+  about:{wave:"sine",from:460,to:340,duration:.09,vibration:18},
+    radio:{wave:"triangle",from:630,to:410,duration:.07,vibration:9},
+  home:{wave:"sine",from:360,to:280,duration:.06,vibration:5}
+ },cue=cues[key]||cues.home;
+ if(navigator.vibrate)navigator.vibrate(cue.vibration);
+ const AudioContextType=window.AudioContext||window.webkitAudioContext;
+ if(!AudioContextType)return;
+ if(!audioContext)audioContext=new AudioContextType();
+ if(audioContext.state==="suspended")audioContext.resume();
+ const oscillator=audioContext.createOscillator(),gain=audioContext.createGain(),now=audioContext.currentTime;
+ oscillator.type=cue.wave;oscillator.frequency.setValueAtTime(cue.from,now);oscillator.frequency.exponentialRampToValueAtTime(cue.to,now+cue.duration);
+ gain.gain.setValueAtTime(.035,now);gain.gain.exponentialRampToValueAtTime(.001,now+cue.duration);
+ oscillator.connect(gain);gain.connect(audioContext.destination);oscillator.start(now);oscillator.stop(now+cue.duration)}
+function navigate(k){clickFeedback(k);go(k)}
+function selectRadioTrack(index){
+ radioTrackIndex=index;clickFeedback("home");
+ const track=tracks[index];
+ if(!track.src){drawRadioDisplay();return}
+ radioAudio.src=track.src;radioAudio.play().then(()=>drawRadioDisplay("PLAYING")).catch(()=>drawRadioDisplay("PLAY FAILED"));
+}
+function selectRadioTrack(index){radioTrackIndex=index;drawRadioDisplay("TUNED");navigate("radio")}
+function go(k){
+ cur=k;const v=VIEW[k],narrow=innerWidth/innerHeight<1;
+ tp.set(...v[0]);tl.set(...v[1]);
+ if(narrow){tp.z+=k==="home"?5:k==="radio"?1.4:2.4;if(k!=="home")tl.y-=k==="radio"?.25:.9}
+ else if(k!=="home"){tp.x-=0;tl.x+=0}
+ if(k==="home"){panel.classList.remove("on");hint.style.opacity=1;nav.style.opacity=1;tyaw=0;return}
+ if(k==="radio"){
+  panel.style.setProperty("--c","#3dffb0");
+  panel.innerHTML=`<div class="panel-nav"><button id="back">Back to desk</button></div><h2>Desk radio</h2><p class="s">${tracks[radioTrackIndex].title} · ${tracks[radioTrackIndex].artist}</p><div class="radio-tracks"></div><iframe id="spotify-player" title="Spotify audio player" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" src="https://open.spotify.com/embed/track/${tracks[radioTrackIndex].id}?utm_source=generator&amp;theme=0"></iframe>`;
+  document.getElementById("back").onclick=()=>navigate("home");
+  const list=panel.querySelector(".radio-tracks");
+  tracks.forEach((track,index)=>{
+   const button=document.createElement("button");button.className="radio-track";button.type="button";button.setAttribute("aria-pressed",index===radioTrackIndex?"true":"false");button.textContent=`${track.title} · ${track.artist}`;
+   button.onclick=()=>{radioTrackIndex=index;clickFeedback("radio");drawRadioDisplay("TUNED");document.querySelectorAll(".radio-track").forEach((item,i)=>item.setAttribute("aria-pressed",i===index?"true":"false"));document.getElementById("spotify-player").src=`https://open.spotify.com/embed/track/${track.id}?utm_source=generator&theme=0`;panel.querySelector("p.s").textContent=`${track.title} · ${track.artist}`};
+   list.appendChild(button);
+  });
+  panel.classList.add("on");hint.style.opacity=0;nav.style.opacity=0;return
+ }
+ const d=DATA[k];panel.style.setProperty("--c",d.c);
+ const index=monitorKeys.indexOf(k),previous=monitorKeys[(index-1+monitorKeys.length)%monitorKeys.length],next=monitorKeys[(index+1)%monitorKeys.length];
+ panel.innerHTML=`<div class="panel-nav"><button id="back">Back to desk</button><button id="previous">Previous</button><button id="next">Next</button></div><h2>${d.t}</h2><p class="s">${d.s}</p>`+d.i.map(i=>`<div class="it"><b>${i[0]}</b><span>${i[1]}</span></div>`).join("");
+ document.getElementById("back").onclick=()=>navigate("home");
+ document.getElementById("previous").onclick=()=>navigate(previous);
+ document.getElementById("next").onclick=()=>navigate(next);
+ panel.classList.add("on");hint.style.opacity=0;nav.style.opacity=0}
+monitorKeys.forEach(k=>{const b=document.createElement("button");b.textContent=DATA[k].t;b.style.setProperty("--c",DATA[k].c);b.onclick=()=>navigate(k);nav.appendChild(b)});
+const ray=new THREE.Raycaster(),m2=new THREE.Vector2();
+function pick(e){m2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(m2,cam);const h=ray.intersectObjects(clickable)[0];return h?h.object:null}
+let sx=0,sy=0,moved=0;
+addEventListener("pointerdown",e=>{if(e.target.closest("button,iframe"))return;drag=true;lx=sx=e.clientX;sy=e.clientY;moved=0});
+addEventListener("pointerup",e=>{
+ if(drag){
+  const dx=e.clientX-sx,dy=e.clientY-sy;
+  if(innerWidth<800&&Math.abs(dx)>48&&Math.abs(dx)>Math.abs(dy)*1.2){
+   const index=swipeStops.indexOf(cur),current=index<0?0:index,direction=dx<0?1:-1;
+   navigate(swipeStops[(current+direction+swipeStops.length)%swipeStops.length]);
+  }else if(moved<6&&cur==="home"){
+   const o=pick(e);if(o){if(Number.isInteger(o.userData.radioTrackIndex))selectRadioTrack(o.userData.radioTrackIndex);else if(o.userData.radioAction==="next")selectRadioTrack((radioTrackIndex+1)%tracks.length);else if(o.userData.radioAction==="open")navigate("radio");else navigate(o.userData.key)}
+  }
+ }
+ drag=false;
+});
+addEventListener("pointercancel",()=>{drag=false});
+addEventListener("pointermove",e=>{
+ mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5;
+ if(drag){moved+=Math.abs(e.clientX-lx);if(cur==="home"&&innerWidth>=800)tyaw=Math.max(-.5,Math.min(.5,tyaw-(e.clientX-lx)*.004));lx=e.clientX}
+ if(cur==="home"&&!drag){const o=pick(e);if(o!==hover){if(hover)hover.material.color.setHex(0xaaaaaa);hover=o;if(o)o.material.color.setHex(0xffffff);R.domElement.style.cursor=o?"pointer":"default"}}});
+addEventListener("keydown",e=>{if(e.key==="Escape")go("home")});
+function size(){R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();go(cur)}
+addEventListener("resize",size);size();
+const calm=matchMedia("(prefers-reduced-motion:reduce)").matches;
+let t=0;
+(function loop(){requestAnimationFrame(loop);t+=.016;
+ pos.lerp(tp,.06);look.lerp(tl,.06);yaw+=(tyaw-yaw)*.08;
+ const px=cur==="home"?mx*.8:0,py=cur==="home"?-my*.3:0;
+ cam.position.set(pos.x+px+Math.sin(yaw)*3,pos.y+py,pos.z-(1-Math.cos(yaw))*3);cam.lookAt(look);
+ if(!calm){pts.rotation.y=t*.02;Object.keys(pl).forEach((k,i)=>pl[k].intensity=.8+Math.sin(t*1.5+i*2)*.12)}
+ R.render(S,cam)})();
+</script></body></html>
