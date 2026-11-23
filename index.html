@@ -35,27 +35,36 @@ canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:
 <script>
 // ===== EDIT YOUR CONTENT HERE (placeholders) =====
 const DATA={
- laptop:{t:"Web Development",c:"#4db8ff",s:"Web development projects, including Shopify builds.",i:[
-  ["Project name 1","One line on what it does and the stack you used."],
-  ["Shopify store build","Custom theme, apps or store you built for a client."],
-  ["Project name 3","Add your best repo or demo link here."]]},
- cyber:{t:"Cybersecurity",c:"#3dffb0",s:"Labs, CTFs and security write-ups.",i:[
-  ["CTF write-up","Platform, challenge, and what you learned."],
-  ["Home lab","Network, tools and what you tested."],
-  ["Vulnerability research","Add a responsible-disclosure or lab project."]]},
- video:{t:"Video Editing",c:"#ff4d8d",s:"Edits, motion and storytelling.",i:[
-  ["Showreel","Link to your best 60 seconds."],
-  ["Short-form edits","Reels, TikToks, YouTube pieces."],
-  ["Tools","Premiere, DaVinci, After Effects, etc."]]},
- about:{t:"About me",c:"#8a7dff",s:"The part that doesn't fit in a resume.",i:[
-  ["Who I am","CS student who builds, breaks and edits things. Write your story here."],
-  ["Off the clock","Night owl. Add what you actually do for fun."],
-  ["Contact","your@email.com · github.com/you · linkedin.com/in/you"]]}
+ laptop:{t:"Web Development",c:"#4db8ff",s:"Freelance application development and project delivery.",i:[
+  ["Web Developer","June 2024 – Present · Freelance, Remote"],
+  ["What I build","Responsive web interfaces and backend API integrations that improve data flow and application reliability."],
+  ["Engineering","Tested and debugged applications to maintain code quality, prevent production issues, and support security compliance and system stability."],
+  ["SkillSync","April 2025 – December 2025 · Senior Project, Notre Dame University, Louaize Campus"],
+  ["Project","Independently designed and built a job-listing web application to compete with LinkedIn and Indeed. Conducted risk assessments to identify project vulnerabilities. <a href=\"https://skillsync20218118.web.app\" target=\"_blank\" rel=\"noopener noreferrer\">Visit live demo</a>"]]},
+ cyber:{t:"Cybersecurity",c:"#3dffb0",s:"Security operations, analysis, labs and professional simulations.",i:[
+  ["Technical Cybersecurity Trainee","May 2025 – September 2025 · Semicolon Academy, Lebanon"],
+  ["Labs","Completed web application security, vulnerability assessment and ethical hacking labs."],
+  ["Security practice","Configured network security tools, analysed traffic, ran penetration testing scripts and investigated simulated incidents."],
+  ["Defensive skills","Monitored logs for unauthorised access and applied secure coding practices to reduce exploitation risk."],
+  ["Job simulations","Deloitte Australia – Cyber Job Simulation (14 November 2026): reviewed web activity logs and identified suspicious activity in a simulated breach. British Airways – Data Science Job Simulation (16 November 2026): scraped customer reviews and built a predictive buying-behaviour model. EY – Technology Risk (16 November 2026): explored IT risks and relationship-building. Mastercard – Cyber Security Analyst (January–February 2026): identified and mitigated phishing threats and recommended stronger security training."]]},
+ experience:{t:"IT Experience",c:"#ff4d8d",s:"Professional IT support and workplace technology.",i:[
+  ["IT Help Desk","13 February 2026 – Present"],
+  ["Responsibilities","Manage and administer networks, provide IT support, and resolve support tickets for 15+ users."],
+  ["Platforms","Support Active Directory and Microsoft 365 environments and work with SIEM platforms including Splunk and Elastic."],
+  ["Impact","Troubleshoot IT issues and reduce setup time by 30%."],
+  ["Core tools","Ticket management, incident response, log monitoring, phishing analysis, vulnerability assessment and network defence."]]},
+ about:{t:"About me",c:"#8a7dff",s:"Computer Science graduate focused on IT and entry-level cybersecurity.",i:[
+  ["Professional summary","Hands-on experience in IT help desk support, network administration, cybersecurity training and web development. Familiar with Splunk, Elastic, Active Directory, Microsoft 365, incident response and threat analysis."],
+  ["Technical skills","IT: help desk, ticket management, troubleshooting, network management, Active Directory and Microsoft 365. Cybersecurity: SIEM, network security, threat analysis, incident response, log monitoring, phishing, vulnerability assessment and penetration testing. Development: web, frontend, API integration, secure coding, data analysis, predictive modelling, testing and debugging."],
+  ["Education","Bachelor of Science in Computer Science · August 2021 – December 2025 · Notre Dame University (NDU), Louaize Campus, Lebanon"],
+  ["Certifications","Cisco – Introduction to Cyber Security (18 November 2026); Cybersecurity Certificate – Semicolon Academy (August–December 2025)."],
+  ["Languages","English (C2 – Proficiency) · Arabic (Native)"],
+  ["Contact","Chouf, Lebanon · ramiklaib95@gmail.com · +961 70 641 980"]]}
 };
 const VIEW={ // camera position, look target
  home:[[0,2.6,8.2],[0,1.7,0]],
  cyber:[[-2.9,2.5,3.3],[-2.9,2.0,0]],
- video:[[0,3.5,3.3],[0,3.05,0]],
+ experience:[[0,3.5,3.3],[0,3.05,0]],
  about:[[2.9,2.5,3.3],[2.9,2.0,0]],
  laptop:[[0,2.0,3.4],[0,1.3,.6]],
  radio:[[-3.85,1.75,4.5],[-3.85,.65,1.25]]
@@ -68,7 +77,7 @@ const cam=new THREE.PerspectiveCamera(50,1,.1,50);
 const mat=(c,r=.7)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:.3});
 function box(w,h,d,m,x,y,z,p=S){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);p.add(o);return o}
 S.add(new THREE.AmbientLight(0x6a5fa0,.55));
-const lights={cyber:0x3dffb0,video:0xff4d8d,about:0x8a7dff,laptop:0x4db8ff};
+const lights={cyber:0x3dffb0,experience:0xff4d8d,about:0x8a7dff,laptop:0x4db8ff};
 const pl={};
 function screenTex(key,lines){
  const c=document.createElement("canvas");c.width=512;c.height=320;const g=c.getContext("2d"),col=DATA[key].c;
@@ -98,7 +107,7 @@ function monitor(key,x,ry,lines,lift=0){
  screen(key,2.34,1.39,0,2.15+lift,-.055,0,0,g,lines);
  const l=new THREE.PointLight(lights[key],.9,6);l.position.set(x,2.2+lift,1.2);S.add(l);pl[key]=l}
 monitor("cyber",-2.9,.2,["$ nmap -sV 10.0.0.5","22/tcp open ssh","80/tcp open http","$ ./exploit --lab","[+] flag captured","$ report.md"]);
-monitor("video",0,0,["TIMELINE 00:00:42","V1 ████░░██████","V2 ░░████░░░███","A1 ██████████░░","FX color·cut·grade","> export 4K"],.9);
+monitor("experience",0,0,["IT HELP DESK · ACTIVE","$ ticket --open","[1] network support","[2] AD & Microsoft 365","$ splunk monitor","15+ users supported"],.9);
 monitor("about",2.9,-.2,["$ whoami","student. builder.","$ cat nights.txt","coffee, code, cuts","$ ls dreams/","*_*"]);
 // laptop
 const lap=new THREE.Group();lap.position.set(0,.96,1.15);S.add(lap);
@@ -140,8 +149,8 @@ const pts=new THREE.Points(pg,new THREE.PointsMaterial({color:0x8a7dff,size:.03,
 let cur="home",pos=new THREE.Vector3(0,2.6,8.2),look=new THREE.Vector3(0,1.7,0),tp=pos.clone(),tl=look.clone();
 let mx=0,my=0,hover=null,drag=false,lx=0,yaw=0,tyaw=0;
 const panel=document.getElementById("panel"),nav=document.getElementById("nav"),hint=document.getElementById("hint");
-const monitorKeys=["laptop","cyber","video","about"];
-const swipeStops=["home","radio","cyber","video","about","laptop"];
+const monitorKeys=["laptop","cyber","experience","about"];
+const swipeStops=["home","radio","cyber","experience","about","laptop"];
 const tracks=[
  {title:"Starburster",artist:"Fontaines D.C.",id:"1cg4xD453Wuol9fNsRDbsV"},
  {title:"Mad Technology",artist:"Zcar Face & Franky Pulitzer",id:"6yDQOCVxV6Z0XGZgbeCvMi"},
@@ -162,7 +171,7 @@ function clickFeedback(key){
  const cues={
   laptop:{wave:"sine",from:780,to:480,duration:.05,vibration:7},
   cyber:{wave:"square",from:1040,to:620,duration:.04,vibration:[5,12,5]},
-  video:{wave:"triangle",from:520,to:740,duration:.075,vibration:12},
+  experience:{wave:"triangle",from:520,to:740,duration:.075,vibration:12},
   about:{wave:"sine",from:460,to:340,duration:.09,vibration:18},
     radio:{wave:"triangle",from:630,to:410,duration:.07,vibration:9},
   home:{wave:"sine",from:360,to:280,duration:.06,vibration:5}
